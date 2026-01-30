@@ -37,6 +37,19 @@ class Staffa:
         """Area totale dei bracci della staffa [mm²]."""
         return self.n_bracci * np.pi * (self.diametro / 2) ** 2
 
+    @property
+    def area_totale(self) -> float:
+        """Alias compatibilità: area totale dei bracci [mm²]."""
+        return self.area_bracci
+
+    def to_dict(self) -> dict:
+        return {
+            "diametro": float(self.diametro),
+            "n_bracci": int(self.n_bracci),
+            "passo": float(self.passo),
+            "area_totale": float(self.area_totale)
+        }
+
 
 @dataclass
 class ProprietaGeometriche:
@@ -108,8 +121,8 @@ class SezioneBase(ABC):
         self.barre_superiori: List[Barra] = []
         self.barre_laterali: List[Barra] = []
         
-        # Armature a taglio
-        self.staffe: List[Staffa] = []
+        # Armature a taglio (una sola configurazione di staffa)
+        self.staffe: Optional[Staffa] = None
         
         # Coefficiente di omogeneizzazione
         self._coeff_omogeneizzazione: Optional[float] = None
@@ -254,16 +267,22 @@ class SezioneBase(ABC):
         
         self.barre_superiori.append(Barra(diametro, n_barre, y_pos))
     
-    def aggiungi_staffe(self, diametro: float, passo: float, n_bracci: int = 2):
+    def aggiungi_staffe(self, diametro: float, passo: float, n_bracci: int = 2, numero_bracci: Optional[int] = None):
         """
-        Aggiunge staffe.
-        
+        Aggiunge o configura le staffe della sezione.
+
+        Accetta sia il nome `n_bracci` che `numero_bracci` per compatibilità
+        con le varie implementazioni delle sottoclassi.
+
         Args:
             diametro: Diametro staffa [mm]
             passo: Passo staffe [mm]
-            n_bracci: Numero bracci
+            n_bracci: Numero bracci (default)
+            numero_bracci: Alternativa per nome del parametro
         """
-        self.staffe.append(Staffa(diametro, n_bracci, passo))
+        n = int(numero_bracci) if numero_bracci is not None else int(n_bracci)
+        self.staffe = Staffa(diametro=diametro, n_bracci=n, passo=passo)
+
     
     def calcola_area_ferro_necessaria(self, M: float, N: float = 0.0,
                                       posizione: str = 'inferiore') -> float:
