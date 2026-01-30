@@ -1,0 +1,50 @@
+# Configurazione esempio per verifica pilastro a pressoflessione
+# DM 2229/1939 - Metodo Santarella
+
+materiali:
+  calcestruzzo:
+    rck: 20.0  # MPa
+    calcola_auto: true
+  
+  acciaio:
+    tipo: "FeB38k"
+    tensione_snervamento: 375.0  # MPa
+    calcola_auto: true
+
+sezione:
+  tipo: "rettangolare"
+  base: 400  # mm
+  altezza: 400  # mm
+  copriferro: 30  # mm
+
+armatura:
+  longitudinale:
+    # Armatura simmetrica per pilastro
+    diametro_inferiore: 20  # mm
+    numero_barre_inferiori: 4
+    diametro_superiore: 20  # mm
+    numero_barre_superiori: 4
+  
+  trasversale:
+    tipo: "staffe"
+    diametro: 10  # mm
+    passo: 150  # mm - Passo ridotto per pilastro
+    bracci: 2
+
+sollecitazioni:
+  sforzo_normale: 200.0  # kN - Compressione
+  momento_flettente: 100.0  # kNm - Pressoflessione retta
+  momento_x: 100.0  # kNm - Per pressoflessione deviata
+  momento_y: 50.0  # kNm - Per pressoflessione deviata
+  taglio: 30.0  # kN
+
+vincoli:
+  lunghezza_libera_inflessione: 3000  # mm
+  coefficiente_vincolo: 1.0  # 1.0 = cerniera-cerniera, 0.7 = incastro-cerniera, 0.5 = incastro-incastro
+
+opzioni_calcolo:
+  metodo: "santarella"
+  tipo_verifica: "pressoflessione_retta"  # "pressoflessione_retta" o "pressoflessione_deviata"
+  considera_effetti_secondo_ordine: true
+  genera_grafici: true
+  formato_output: "html"

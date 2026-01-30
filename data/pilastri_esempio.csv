@@ -1,0 +1,4 @@
+tipo,base,altezza,copriferro,rck,tipo_acciaio,sforzo_normale,momento_x,momento_y,diametro_inf,numero_inf,diametro_sup,numero_sup,diametro_staffe,passo_staffe
+pilastro,400,400,30,20,FeB38k,200,100,50,20,4,20,4,10,150
+pilastro,500,500,35,25,FeB44k,350,150,80,24,6,24,6,12,200
+pilastro,300,300,25,15,FeB32k,120,60,30,16,4,16,4,8,150

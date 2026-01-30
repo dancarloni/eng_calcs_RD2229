@@ -1,0 +1,54 @@
+# Configurazione esempio per verifica trave in calcestruzzo armato
+# DM 2229/1939 - Metodo Santarella
+
+materiali:
+  calcestruzzo:
+    rck: 15.0  # MPa - Resistenza caratteristica
+    tensione_ammissibile_compressione: 5.0  # MPa (Rck/3)
+    tensione_ammissibile_taglio: 0.81  # MPa (0.054 * Rck)
+    coefficiente_omogeneizzazione: 15  # n = Es/Ec
+    calcola_auto: true  # Se true, calcola automaticamente le tensioni ammissibili
+  
+  acciaio:
+    tipo: "FeB32k"  # Ferro B 32 kg/mm²
+    tensione_snervamento: 320.0  # MPa
+    tensione_ammissibile: 140.0  # MPa (fyk / 2.3)
+    modulo_elastico: 206000.0  # MPa
+    calcola_auto: true
+
+sezione:
+  tipo: "rettangolare"
+  base: 300  # mm
+  altezza: 500  # mm
+  copriferro: 30  # mm
+
+armatura:
+  longitudinale:
+    diametro_inferiore: 16  # mm - Armatura tesa
+    numero_barre_inferiori: 4
+    diametro_superiore: 12  # mm - Armatura compressa (staffaggio)
+    numero_barre_superiori: 2
+  
+  trasversale:
+    tipo: "staffe"
+    diametro: 8  # mm
+    passo: 200  # mm
+    bracci: 2
+  
+  ferri_piegati:
+    usa: false  # Imposta a true per includere ferri piegati
+    diametro: 12  # mm
+    numero: 2
+    inclinazione: 45  # gradi
+
+sollecitazioni:
+  momento_flettente: 80.0  # kNm
+  sforzo_normale: 0.0  # kN (positivo = compressione)
+  taglio: 50.0  # kN
+
+opzioni_calcolo:
+  metodo: "santarella"  # "santarella" o "giangreco"
+  genera_grafici: true
+  formato_output: "pdf"  # "pdf", "html", "markdown", "docx"
+  decimali: 3
+  unita_misura: "SI"  # "SI" o "TECH"

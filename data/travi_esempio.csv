@@ -1,0 +1,4 @@
+tipo,base,altezza,copriferro,rck,tipo_acciaio,momento,taglio,diametro_inf,numero_inf,diametro_sup,numero_sup,diametro_staffe,passo_staffe,bracci_staffe
+trave,300,500,30,15,FeB32k,80,50,16,4,12,2,8,200,2
+trave,350,600,30,20,FeB38k,120,70,20,5,14,2,8,150,2
+trave,400,700,35,25,FeB38k,180,90,22,6,16,3,10,200,2
