@@ -12,9 +12,25 @@ AGGIORNATO: Ora eredita da SezioneBase con supporto completo per:
 - Rotazione 90 gradi
 """
 
+from dataclasses import dataclass
 from typing import List, Optional, Tuple, Dict
 import numpy as np
 from .sezione_base import SezioneBase, ProprietaGeometriche, Barra, Staffa
+
+
+@dataclass
+class Staffa:
+    """
+    Rappresenta una staffa per armatura a taglio.
+    
+    Attributes:
+        diametro: Diametro della staffa in mm
+        passo: Passo della staffa in mm (distanza tra staffe)
+        numero_bracci: Numero di bracci della staffa
+    """
+    
+    diametro: float  # mm
+    passo: float  # mm
     numero_bracci: int = 2
     
     @property

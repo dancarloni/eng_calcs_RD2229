@@ -3,6 +3,9 @@ Modulo Acciaio - Proprietà e tipi di acciaio secondo DM 2229/1939.
 
 Implementa le proprietà dell'acciaio da armatura e i metodi di calcolo
 delle tensioni ammissibili secondo la normativa dell'epoca.
+
+Fonte: Regio Decreto 2229 del 1939 e prontuari dell'Ing. Santarella.
+Tabelle da scansioni storiche RD 2229 (1939).
 """
 
 from dataclasses import dataclass
@@ -107,6 +110,55 @@ class Acciaio:
             tipo=tipo,
             tensione_snervamento=dati["fyk"],
             aderenza_migliorata=dati.get("aderenza_migliorata", False),
+            calcola_auto=calcola_auto,
+        )
+    
+    @classmethod
+    def da_tabella_storica(
+        cls,
+        resistenza_kgcm2: float,
+        tipo_acciaio: str = "dolce",
+        calcola_auto: bool = True
+    ) -> "Acciaio":
+        """
+        Crea un acciaio da dati storici RD 2229/1939.
+        
+        Converte da valori Kg/cm² a MPa usando i carichi unitari di sicurezza
+        dalla normativa storica.
+        
+        Args:
+            resistenza_kgcm2: Resistenza in Kg/cm²
+            tipo_acciaio: "dolce", "semiriduro", "duro"
+            calcola_auto: Se True calcola i parametri
+        
+        Returns:
+            Oggetto Acciaio
+            
+        Example:
+            >>> acc = Acciaio.da_tabella_storica(1400, tipo_acciaio="dolce")
+            >>> acc.tensione_snervamento  # Avrà valore in MPa
+        """
+        from verifiche_dm1939.core.conversioni_unita import kgcm2_to_mpa
+        from verifiche_dm1939.core.dati_storici_rd2229 import CarichUnitariSicurezza
+        
+        # Converto da Kg/cm² a MPa
+        tensione_mpa = kgcm2_to_mpa(resistenza_kgcm2)
+        
+        # Determino tipo e aderenza in base al tipo
+        if tipo_acciaio == "dolce":
+            tipo = "FeB32k"
+            aderenza = False
+        elif tipo_acciaio == "semiriduro":
+            tipo = "FeB38k"
+            aderenza = True
+        else:  # duro
+            tipo = "FeB44k"
+            aderenza = True
+        
+        return cls(
+            tipo=tipo,
+            tensione_snervamento=tensione_mpa,
+            aderenza_migliorata=aderenza,
             calcola_auto=calcola_auto,
         )
     

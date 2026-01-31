@@ -3,11 +3,21 @@ Modulo Calcestruzzo - Proprietà e verifiche secondo DM 2229/1939.
 
 Implementa le proprietà del calcestruzzo e i metodi di calcolo
 delle tensioni ammissibili secondo la normativa dell'epoca.
+
+Fonte: Regio Decreto 2229 del 1939 e prontuari dell'Ing. Santarella.
+Tabelle da scansioni storiche RD 2229 (1939).
 """
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Tuple
 import numpy as np
+
+from verifiche_dm1939.core.dati_storici_rd2229 import (
+    modulo_elasticita_calcestruzzo_mpa,
+    CarichUnitariSicurezza,
+    interpola_resistenza_calcestruzzo,
+    MODULO_ELASTICITA_ACCIAIO_MPA,
+)
 
 
 @dataclass
@@ -25,24 +35,75 @@ class Calcestruzzo:
         coefficiente_omogeneizzazione: n (rapporto Es/Ec)
         modulo_elastico: Ec in MPa
         calcola_auto: Se True calcola automaticamente i parametri
+        da_tabella_storica: Se True usa formule da tabelle RD 2229
+        tipo_cemento: "normale", "alta_resistenza", "alluminoso"
+        rapporto_ac: Rapporto acqua/cemento (per calcoli dalla tabella storica)
     """
     
     resistenza_caratteristica: float  # Rck [MPa]
     tensione_ammissibile_compressione: Optional[float] = None  # σc,amm [MPa]
     tensione_ammissibile_taglio: Optional[float] = None  # τc,amm [MPa]
-    coefficiente_omogeneizzazione: int = 15  # n = Es/Ec
+    coefficiente_omogeneizzazione: Optional[float] = None  # n = Es/Ec
     modulo_elastico: Optional[float] = None  # Ec [MPa]
     calcola_auto: bool = True
+    da_tabella_storica: bool = False  # Se True usa formule RD 2229 1939
+    tipo_cemento: str = "normale"  # "normale", "alta_resistenza", "alluminoso"
+    rapporto_ac: Optional[float] = None  # A/C per ricerche in tabella storica
     
     def __post_init__(self) -> None:
         """Inizializza e calcola i parametri se necessario."""
         if self.calcola_auto:
-            self._calcola_parametri()
+            if self.da_tabella_storica:
+                self._calcola_parametri_storici()
+            else:
+                self._calcola_parametri()
         self._valida_parametri()
+    
+    def _calcola_parametri_storici(self) -> None:
+        """
+        Calcola parametri usando formule storiche RD 2229/1939.
+        
+        Secondo tabelle e prontuari dell'Ing. Santarella:
+        - Modulo elastico: Ec = 550000·σc/(σc+200) in Kg/cm²
+        - Coefficiente omogeneizzazione: n = Es/Ec (Es=2.000.000 Kg/cm²)
+        - Tensione ammissibile compressione: da carico unitario sicurezza
+        - Tensione ammissibile taglio: 4 Kg/cm² (normale), 6 (alta resistenza)
+        """
+        from verifiche_dm1939.core.conversioni_unita import kgcm2_to_mpa, mpa_to_kgcm2
+        
+        # Converto Rck MPa → Kg/cm² per formule storiche
+        rck_kgcm2 = mpa_to_kgcm2(self.resistenza_caratteristica)
+        
+        # Modulo elastico secondo formula storica
+        if self.modulo_elastico is None:
+            ec_kgcm2 = modulo_elasticita_calcestruzzo_mpa(self.resistenza_caratteristica)
+            self.modulo_elastico = ec_kgcm2
+        
+        # Coefficiente omogeneizzazione
+        if self.coefficiente_omogeneizzazione is None:
+            ec_kgcm2 = mpa_to_kgcm2(self.modulo_elastico)
+            self.coefficiente_omogeneizzazione = MODULO_ELASTICITA_ACCIAIO_MPA / (self.modulo_elastico or 30000)
+        
+        # Tensione ammissibile compressione (se non fornita)
+        if self.tensione_ammissibile_compressione is None:
+            # Usa carico unitario sicurezza da RD 2229
+            if self.tipo_cemento == "alta_resistenza":
+                sigma_c_amm_kgcm2 = CarichUnitariSicurezza.SIGMA_C_COMPRESSIONE_INFLESSA_ALT
+            else:
+                sigma_c_amm_kgcm2 = CarichUnitariSicurezza.SIGMA_C_COMPRESSIONE_INFLESSA_NORM
+            self.tensione_ammissibile_compressione = kgcm2_to_mpa(sigma_c_amm_kgcm2)
+        
+        # Tensione ammissibile taglio
+        if self.tensione_ammissibile_taglio is None:
+            if self.tipo_cemento in ("alta_resistenza", "alluminoso"):
+                tau_c_amm_kgcm2 = CarichUnitariSicurezza.TAU_TAGLIO_ALTA_RESISTENZA
+            else:
+                tau_c_amm_kgcm2 = CarichUnitariSicurezza.TAU_TAGLIO_NORMALE
+            self.tensione_ammissibile_taglio = kgcm2_to_mpa(tau_c_amm_kgcm2)
     
     def _calcola_parametri(self) -> None:
         """
-        Calcola automaticamente i parametri del calcestruzzo.
+        Calcola automaticamente i parametri del calcestruzzo (metodo moderno).
         
         Secondo DM 2229/1939 e teoria di Santarella:
         - Tensione ammissibile compressione: σc,amm = Rck / 3
@@ -62,6 +123,11 @@ class Calcestruzzo:
         if self.modulo_elastico is None:
             # Ec = 5700 * sqrt(Rck) [MPa] per Rck in MPa
             self.modulo_elastico = 5700.0 * np.sqrt(self.resistenza_caratteristica)
+        
+        # Coefficiente omogeneizzazione (se non fornito)
+        if self.coefficiente_omogeneizzazione is None:
+            # n = Es / Ec, con Es = 200000 MPa, Ec calcolato
+            self.coefficiente_omogeneizzazione = 200000 / self.modulo_elastico
     
     def _valida_parametri(self) -> None:
         """Valida i parametri del calcestruzzo."""
@@ -109,6 +175,42 @@ class Calcestruzzo:
             raise ValueError(f"Classe calcestruzzo non valida: {classe}")
         
         return cls(resistenza_caratteristica=rck, calcola_auto=calcola_auto)
+    
+    @classmethod
+    def da_tabella_storica(
+        cls,
+        resistenza_compressione_kgcm2: float,
+        tipo_cemento: str = "normale",
+        rapporto_ac: Optional[float] = None
+    ) -> "Calcestruzzo":
+        """
+        Crea un calcestruzzo da dati storici RD 2229/1939.
+        
+        Usa le formule e tabelle dal prontuario storico dell'Ing. Santarella.
+        
+        Args:
+            resistenza_compressione_kgcm2: Resistenza a compressione in Kg/cm²
+            tipo_cemento: "normale", "alta_resistenza", "alluminoso"
+            rapporto_ac: Rapporto A/C (opzionale, per tracciabilità)
+        
+        Returns:
+            Oggetto Calcestruzzo con parametri da tabella storica
+            
+        Example:
+            >>> cls = Calcestruzzo.da_tabella_storica(resistenza_compressione_kgcm2=280)
+            >>> cls.modulo_elastico  # Calcolato da formula storica
+        """
+        from verifiche_dm1939.core.conversioni_unita import kgcm2_to_mpa
+        
+        rck_mpa = kgcm2_to_mpa(resistenza_compressione_kgcm2)
+        
+        return cls(
+            resistenza_caratteristica=rck_mpa,
+            da_tabella_storica=True,
+            tipo_cemento=tipo_cemento,
+            rapporto_ac=rapporto_ac,
+            calcola_auto=True
+        )
     
     def coefficiente_riduzione_taglio(self, percentuale_armatura: float) -> float:
         """
