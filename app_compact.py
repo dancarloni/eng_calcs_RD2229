@@ -20,14 +20,42 @@ from verifiche_dm1939.sections import (
     SezioneRettangolare, SezioneT, SezioneI, SezioneL, SezioneU,
     SezioneRettangolareCava, SezioneCircolare, SezioneCircolareCava
 )
+from verifiche_dm1939.core.materiali_storici_completi import (
+    CALCESTRUZZI_STORICI, ACCIAI_STORICI,
+    elenca_calcestruzzi_dict, elenca_acciai_dict,
+    valida_calcestruzzo, valida_acciaio,
+    crea_tabella_comparativa
+)
 
 CONFIG_DIR = os.path.join(os.path.dirname(__file__), 'config')
 MATERIALS_FILE = os.path.join(CONFIG_DIR, 'materials.json')
 
 DEFAULT_MATERIALS = {
-    "C30 (Rck30)": {"rck": 30.0, "ec": 24200.0, "sigma_cls_amm": 3.0},
-    "C25 (Rck25)": {"rck": 25.0, "ec": 22800.0, "sigma_cls_amm": 2.6},
-    "FeB32k": {"fyk": 320.0, "es": 206000.0, "sigma_s_amm": 200.0}
+    "C280 (Storico Standard)": {
+        "tipo_mat": "calcestruzzo",
+        "sigma_c_kgcm2": 280,
+        "sigma_c_ammissibile_kgcm2": 28,
+        "tau_ammissibile_kgcm2": 4.0,
+        "modulo_elastico_kgcm2": 373000,
+        "coefficiente_omogeneo": 5.4,
+        "tipo_cemento": "normale"
+    },
+    "FeB32k (Dolce)": {
+        "tipo_mat": "acciaio",
+        "tipo": "FeB32k",
+        "sigma_y_kgcm2": 1400,
+        "sigma_ammissibile_kgcm2": 609,
+        "modulo_elastico_kgcm2": 2000000,
+        "aderenza_migliorata": False
+    },
+    "Aq70 (Qualificato 70)": {
+        "tipo_mat": "acciaio",
+        "tipo": "Aq70",
+        "sigma_y_kgcm2": 700,
+        "sigma_ammissibile_kgcm2": 308,
+        "modulo_elastico_kgcm2": 2050000,
+        "aderenza_migliorata": True
+    }
 }
 
 CSV_HEADERS = [
@@ -35,25 +63,42 @@ CSV_HEADERS = [
 ]
 
 st.set_page_config(page_title='Compact Verifiche', layout='wide')
-st.title('Compact GUI - Verifiche DM 2229/1939')
+st.title('Compact GUI - Verifiche DM 2229/1939 - Materiali Storici Santarella')
 
 # Utility materiali
 if not os.path.isdir(CONFIG_DIR):
     os.makedirs(CONFIG_DIR, exist_ok=True)
 
 def load_materials():
+    # Carica da file se esiste
     if os.path.isfile(MATERIALS_FILE):
         try:
             with open(MATERIALS_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except Exception:
-            return DEFAULT_MATERIALS.copy()
+                user_materials = json.load(f)
+        except:
+            user_materials = {}
     else:
-        return DEFAULT_MATERIALS.copy()
+        user_materials = {}
+    
+    # Combina default + storici + utente
+    combined = DEFAULT_MATERIALS.copy()
+    
+    # Aggiungi materiali storici
+    for c in elenca_calcestruzzi_dict():
+        combined[c['nome']] = c
+    
+    for a in elenca_acciai_dict():
+        combined[a['nome']] = a
+    
+    # Aggiungi materiali utente (sovrascritti se nome duplicato)
+    combined.update(user_materials)
+    
+    return combined
 
-def save_materials(mat_dict):
+def save_materials(user_mats):
+    """Salva solo i materiali utente (non i storici)."""
     with open(MATERIALS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(mat_dict, f, indent=2, ensure_ascii=False)
+        json.dump(user_mats, f, indent=2, ensure_ascii=False)
 
 materials = load_materials()
 
@@ -80,7 +125,15 @@ with col_im3:
         st.session_state['elements'].append({h: '' for h in CSV_HEADERS})
         st.session_state['elements'][-1]['id'] = str(new_id)
 with col_im4:
-    st.markdown('Materiali salvati: ' + ', '.join(list(materials.keys())))
+    st.markdown(f'**Materiali disponibili:** {len(materials)}')
+    
+    # Bottone per mostrare tabella materiali
+    if st.checkbox("Mostra tabella completa materiali", value=False):
+        st.markdown("### TABELLA MATERIALI STORICI E UTENTE")
+        
+        # Crea lista materiali per tabella
+        mats_for_table = list(materials.values())
+        st.code(crea_tabella_comparativa(mats_for_table), language=None)
 
 # Gestione import
 if uploaded is not None:
@@ -205,43 +258,148 @@ if len(st.session_state['elements'])>0:
 
 # Materiali: aggiungi/modifica
 st.markdown('---')
-st.markdown('## Materiali - aggiungi/modifica (visibili per import/export)')
-colm1, colm2, colm3, colm4 = st.columns(4)
-with colm1:
-    new_name = st.text_input('Nome materiale', '')
-with colm2:
-    new_rck = st.number_input('Rck [MPa]', value=30.0, step=1.0)
-with colm3:
-    new_ec = st.number_input('Ec [MPa]', value=24200.0, step=100.0)
-with colm4:
-    new_sigma_cls = st.number_input('σ_cls_amm [MPa]', value=3.0, step=0.1)
+st.markdown('## Inserisci Nuovo Materiale (Calcestruzzo o Acciaio)')
 
-colm5, colm6 = st.columns(2)
-with colm5:
-    new_fyk = st.number_input('fyk [MPa] (acciaio)', value=320.0, step=10.0)
-with colm6:
-    new_es = st.number_input('Es [MPa] (acciaio)', value=206000.0, step=1000.0)
+tab_cls_new, tab_acc_new = st.tabs(["Calcestruzzo", "Acciaio"])
 
-if st.button('Salva materiale'):
-    if not new_name:
-        st.error('Inserire nome materiale')
-    else:
-        materials[new_name] = {
-            'rck': float(new_rck), 'ec': float(new_ec), 'sigma_cls_amm': float(new_sigma_cls),
-            'fyk': float(new_fyk), 'es': float(new_es)
-        }
-        save_materials(materials)
-        st.success(f'Materiale {new_name} salvato')
+with tab_cls_new:
+    st.subheader("Aggiungi Calcestruzzo")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        new_name_cls = st.text_input('Nome calcestruzzo', key='name_cls')
+        new_sigma_c = st.number_input('Sigma_c tabulare [Kg/cm²]', value=280.0, step=10.0, key='sigma_c')
+        new_sigma_amm = st.number_input('Sigma ammissibile [Kg/cm²]', value=28.0, step=1.0, key='sigma_amm')
+    with col2:
+        new_tau_amm = st.number_input('Tau ammissibile [Kg/cm²]', value=4.0, step=0.1, key='tau_amm')
+        new_ec = st.number_input('Modulo Ec [Kg/cm²]', value=373000.0, step=1000.0, key='ec')
+        new_n = st.number_input('Coefficiente n (Es/Ec)', value=5.4, step=0.1, key='n')
+    with col3:
+        new_tipo_cemento = st.selectbox('Tipo cemento', ['normale', 'alta_resistenza', 'alluminoso'], key='tipo_cem')
+        new_rapporto_ac = st.number_input('Rapporto A/C (opzionale)', value=0.70, step=0.05, key='ac_ratio')
+        new_note_cls = st.text_area('Note', key='note_cls', height=60)
+    
+    if st.button('Aggiungi Calcestruzzo', key='btn_add_cls'):
+        # Validazione
+        è_valido, avvisi = valida_calcestruzzo(new_sigma_c, new_sigma_amm, new_tau_amm, new_ec, new_n)
+        
+        if not è_valido:
+            st.error("❌ Calcestruzzo NON VALIDO - Verificare i parametri:")
+            for avv in avvisi:
+                st.error(avv)
+        else:
+            # Mostra avvisi ma consente inserimento
+            if avvisi:
+                st.warning("⚠️ Avvisi di conformità:")
+                for avv in avvisi:
+                    st.warning(avv)
+            
+            if new_name_cls:
+                # Carica materiali utente attuali
+                if os.path.isfile(MATERIALS_FILE):
+                    with open(MATERIALS_FILE, 'r', encoding='utf-8') as f:
+                        user_mats = json.load(f)
+                else:
+                    user_mats = {}
+                
+                # Aggiungi nuovo materiale
+                user_mats[new_name_cls] = {
+                    'tipo_mat': 'calcestruzzo',
+                    'sigma_c_kgcm2': float(new_sigma_c),
+                    'sigma_c_ammissibile_kgcm2': float(new_sigma_amm),
+                    'tau_ammissibile_kgcm2': float(new_tau_amm),
+                    'modulo_elastico_kgcm2': float(new_ec),
+                    'coefficiente_omogeneo': float(new_n),
+                    'tipo_cemento': new_tipo_cemento,
+                    'rapporto_ac': float(new_rapporto_ac),
+                    'note': new_note_cls
+                }
+                save_materials(user_mats)
+                materials = load_materials()  # Ricarica
+                st.success(f"✓ Calcestruzzo '{new_name_cls}' aggiunto correttamente")
+            else:
+                st.error("Inserire un nome per il calcestruzzo")
 
-# Export materiali
-if st.button('Esporta materiali (JSON)'):
-    st.download_button('Download materials.json', data=json.dumps(materials, indent=2, ensure_ascii=False), file_name='materials.json')
+with tab_acc_new:
+    st.subheader("Aggiungi Acciaio")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        new_name_acc = st.text_input('Nome acciaio', key='name_acc')
+        new_tipo_acc = st.text_input('Tipo (es. FeB32k, Aq70)', value='FeB32k', key='tipo_acc')
+        new_sigma_y = st.number_input('Sigma_y snervamento [Kg/cm²]', value=1400.0, step=50.0, key='sigma_y')
+    with col2:
+        new_sigma_amm_acc = st.number_input('Sigma ammissibile [Kg/cm²]', value=609.0, step=10.0, key='sigma_amm_acc')
+        new_es = st.number_input('Modulo Es [Kg/cm²]', value=2000000.0, step=10000.0, key='es')
+        new_aderenza = st.checkbox('Aderenza migliorata', value=False, key='aderenza')
+    with col3:
+        new_note_acc = st.text_area('Note', key='note_acc', height=60)
+        new_norma = st.selectbox('Norma/Standard', ['FeB (Ferro-Beton)', 'Aq (Qualificato)', 'Altro'], key='norma')
+    
+    if st.button('Aggiungi Acciaio', key='btn_add_acc'):
+        # Validazione
+        è_valido, avvisi = valida_acciaio(new_sigma_y, new_sigma_amm_acc, new_es)
+        
+        if not è_valido:
+            st.error("❌ Acciaio NON VALIDO - Verificare i parametri:")
+            for avv in avvisi:
+                st.error(avv)
+        else:
+            # Mostra avvisi ma consente inserimento
+            if avvisi:
+                st.warning("⚠️ Avvisi di conformità:")
+                for avv in avvisi:
+                    st.warning(avv)
+            
+            if new_name_acc:
+                # Carica materiali utente attuali
+                if os.path.isfile(MATERIALS_FILE):
+                    with open(MATERIALS_FILE, 'r', encoding='utf-8') as f:
+                        user_mats = json.load(f)
+                else:
+                    user_mats = {}
+                
+                # Aggiungi nuovo materiale
+                user_mats[new_name_acc] = {
+                    'tipo_mat': 'acciaio',
+                    'tipo': new_tipo_acc,
+                    'sigma_y_kgcm2': float(new_sigma_y),
+                    'sigma_ammissibile_kgcm2': float(new_sigma_amm_acc),
+                    'modulo_elastico_kgcm2': float(new_es),
+                    'aderenza_migliorata': new_aderenza,
+                    'note': new_note_acc,
+                    'norma': new_norma
+                }
+                save_materials(user_mats)
+                materials = load_materials()  # Ricarica
+                st.success(f"✓ Acciaio '{new_name_acc}' aggiunto correttamente")
+            else:
+                st.error("Inserire un nome per l'acciaio")
 
 st.write('File materiali usato:', MATERIALS_FILE)
 
 # Quick help
 st.markdown('---')
-st.markdown('CSV headers attesi:')
+st.markdown('## ℹ️ INFORMAZIONI')
+st.markdown("""
+**Sistema di materiali storici RD 2229/1939 - Prontuario Santarella**
+
+✓ **Calcestruzzi storici** - 7 tipi pre-caricati da 150 a 750 Kg/cm²
+✓ **Acciai storici** - 8 tipi (FeB32k, FeB38k, FeB44k, Aq50, Aq60, Aq70, Aq80)
+✓ **Validazione formule** - Controllo automatico su sigma_amm, tau_amm, Ec, n
+✓ **Avvisi anomalie** - Segnala valori fuori range ma NON blocca l'inserimento
+✓ **Persistenza** - Materiali utente salvati in config/materials.json
+
+**Formula Santarella per Modulo Elastico:**
+```
+Ec = 550000 * σc / (σc + 200)  [Kg/cm²]
+```
+
+**Coefficiente omogeneizzazione:**
+```
+n = Es / Ec  (Es = 2,000,000 Kg/cm²)
+```
+
+**Headers CSV attesi:**
+""")
 st.code(','.join(CSV_HEADERS))
 
 
