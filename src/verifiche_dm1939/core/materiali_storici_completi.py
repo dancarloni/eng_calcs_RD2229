@@ -1,13 +1,14 @@
 """
-MATERIALI STORICI COMPLETI - RD 2229/1939
-Tabelle complete di calcestruzzi e acciai storici con tutti i parametri espliciti
+PARAMETRI COMPLETI MATERIALI STORICI - RD 2229/1939
+Tabelle dettagliate con TUTTI i parametri riferiti a normative e fonti storiche
 
 Fonti:
-- Prontuario Santarella (1930-1970)
-- RD 2229/1939 Norme Tecniche delle Costruzioni
+- RD 2229/1939 "Norme tecniche delle costruzioni in cemento armato"
+- Prontuario dell'Ing. Luigi Santarella (1930-1970)
+- Tabelle III e II dal Prontuario Santarella
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
 
@@ -15,204 +16,434 @@ from typing import Dict, List, Optional, Tuple
 # CALCESTRUZZI STORICI
 # ======================================================================================
 
-@dataclass
-class CalcestrutzoStorico:
-    """Calcestruzzo storico con parametri completi."""
-    nome: str
-    sigma_c_kgcm2: float  # Resistenza compressione tabulare [Kg/cm²]
-    sigma_c_ammissibile_kgcm2: float  # Tensione ammissibile compressione [Kg/cm²]
-    tau_ammissibile_kgcm2: float  # Tensione ammissibile taglio [Kg/cm²]
-    modulo_elastico_kgcm2: float  # Modulo elastico Ec [Kg/cm²]
-    coefficiente_omogeneo: float  # n = Es/Ec (Es = 2,000,000 Kg/cm²)
-    tipo_cemento: str  # 'normale', 'alta_resistenza', 'alluminoso'
-    rapporto_ac: Optional[float] = None  # Rapporto A/C se disponibile
-    note: str = ""
-
-
-@dataclass
-class AcciaioStorico:
-    """Acciaio storico con parametri completi."""
-    nome: str
-    tipo: str  # 'FeB32k', 'FeB38k', 'FeB44k', 'Aq50', 'Aq60', 'Aq70', etc.
-    sigma_y_kgcm2: float  # Tensione snervamento [Kg/cm²]
-    sigma_ammissibile_kgcm2: float  # Tensione ammissibile [Kg/cm²]
-    modulo_elastico_kgcm2: float  # Modulo elastico Es [Kg/cm²]
-    aderenza_migliorata: bool  # True se aderenza migliorata
-    note: str = ""
-
-
 # ======================================================================================
-# TABELLA CALCESTRUZZI STORICI (RD 2229/1939)
+# DATACLASSES - DEFINIZIONE COMPLETA PARAMETRI
 # ======================================================================================
 
-CALCESTRUZZI_STORICI: List[CalcestrutzoStorico] = [
-    # Calcestruzzi storici comuni (da Tabella II RD 2229/1939)
+@dataclass
+class CalcestrutzoCompleto:
+    """Calcestruzzo con TUTTI i parametri storici."""
     
-    # Categoria bassa (150-200 Kg/cm²) - Edilizia ordinaria
-    CalcestrutzoStorico(
-        nome="C150 (150 Kg/cm²)",
+    # IDENTIFICAZIONE
+    nome: str  # es. "C280 Normale RD2229"
+    sigla: str  # es. "C280"
+    
+    # RESISTENZA (Tabella II RD 2229, pag. 9)
+    sigma_c_kgcm2: float  # Resistenza compressione [Kg/cm²]
+    
+    # CARICHI AMMISSIBILI (RD 2229 pag. 14-15)
+    sigma_c_semplice_kgcm2: float  # Sezioni semplicemente compresse [Kg/cm²]
+    sigma_c_inflessa_kgcm2: float  # Sezioni inflesse [Kg/cm²]
+    tau_ammissibile_kgcm2: float  # Taglio [Kg/cm²]
+    
+    # PROPRIETÀ ELASTICHE (Formula Santarella - Prontuario pag. XX)
+    modulo_elastico_kgcm2: float  # Ec [Kg/cm²]
+    coefficiente_omogeneo: float  # n = Es/Ec (Es = 2,000,000 Kg/cm²)
+    
+    # COMPOSIZIONE
+    tipo_cemento: str  # "normale" | "alta_resistenza" | "alluminoso"
+    rapporto_ac: Optional[float] = None  # Acqua/Cemento (Tabella III Santarella)
+    rapporto_cemento_sabbia: Optional[str] = None  # es. "1:1.85"
+    
+    # QUANTITATIVI PER m³ (da Tabella III - Quantitativi di cemento e sabbia)
+    cemento_kg_m3: Optional[float] = None  # Cemento [kg/m³]
+    sabbia_kg_m3: Optional[float] = None  # Sabbia [kg/m³]
+    massa_volumica_kg_m3: Optional[float] = None  # Peso specifico apparente [kg/m³]
+    
+    # NORMATIVA E FONTI
+    normativa: str = "RD 2229/1939"  # Decreto di riferimento
+    pagina_tabella_ii: str = "pag. 9"
+    pagina_carichi: str = "pag. 14-15"
+    fonte_ec: str = "Formula Santarella Prontuario"
+    
+    # NOTE STORICHE
+    note: str = ""
+    anno_norma: int = 1939
+    
+    # ADDITIONAL INFO
+    applicazioni: str = ""  # Usi comuni nell'epoca
+    limitazioni: str = ""  # Limitazioni d'uso
+
+
+@dataclass
+class AcciaioCompleto:
+    """Acciaio con TUTTI i parametri storici."""
+    
+    # IDENTIFICAZIONE
+    nome: str  # es. "FeB32k Dolce"
+    sigla: str  # es. "FeB32k"
+    tipo: str  # es. "FeB32k" | "Aq70"
+    classificazione: str  # "FeB (Ferro-Beton)" | "Aq (Qualificato)"
+    
+    # RESISTENZA (RD 2229 pag. 14-15)
+    sigma_y_kgcm2: float  # Tensione di snervamento fy [Kg/cm²]
+    
+    # CARICHI AMMISSIBILI (RD 2229)
+    sigma_ammissibile_traczione_kgcm2: float  # Traczione [Kg/cm²]
+    sigma_ammissibile_compressione_kgcm2: Optional[float] = None  # Compressione [Kg/cm²]
+    
+    # PROPRIETÀ ELASTICHE
+    modulo_elastico_kgcm2: float = 2000000  # Es [Kg/cm²]
+    
+    # ADERENZA (Pag. 11 RD 2229)
+    tipo_aderenza: str = "liscia"  # "liscia" | "migliorata"
+    aderenza_migliorata: bool = False  # True se migliorata
+    caratteri_aderenza: str = ""  # es. "barre lisce, raschiate, ecc."
+    
+    # DIAMETRI DISPONIBILI (Serie storiche)
+    diametri_disponibili: List[float] = field(default_factory=lambda: [6, 8, 10, 12, 14, 16, 18, 20, 22, 25, 28, 32])
+    diametro_min_mm: float = 6.0
+    diametro_max_mm: float = 32.0
+    
+    # NORMATIVA E FONTI
+    normativa: str = "RD 2229/1939"
+    pagina_resistenza: str = "pag. 9"
+    pagina_carichi: str = "pag. 14-15"
+    pagina_aderenza: str = "pag. 11"
+    
+    # NOTE STORICHE
+    note: str = ""
+    anno_norma: int = 1939
+    
+    # ADDITIONAL INFO
+    applicazioni: str = ""  # Usi comuni
+    limitazioni: str = ""  # Limitazioni d'uso
+
+
+# ======================================================================================
+# TABELLA CALCESTRUZZI COMPLETI (RD 2229/1939 + Santarella Prontuario)
+# ======================================================================================
+
+CALCESTRUZZI_COMPLETI: List[CalcestrutzoCompleto] = [
+    CalcestrutzoCompleto(
+        nome="C150 - Cemento Normale - RD2229/1939",
+        sigla="C150",
         sigma_c_kgcm2=150,
-        sigma_c_ammissibile_kgcm2=15,  # 10% della resistenza
+        sigma_c_semplice_kgcm2=15,
+        sigma_c_inflessa_kgcm2=12,
         tau_ammissibile_kgcm2=2.5,
-        modulo_elastico_kgcm2=250000,  # Ec = 550000*150/(150+200)
+        modulo_elastico_kgcm2=250000,
         coefficiente_omogeneo=8.0,
         tipo_cemento="normale",
         rapporto_ac=1.10,
-        note="Edilizia ordinaria, scariche limitate"
+        rapporto_cemento_sabbia="1:2.70",
+        cemento_kg_m3=290,
+        sabbia_kg_m3=790,
+        massa_volumica_kg_m3=1080,
+        pagina_tabella_ii="pag. 9 (Tabella II RD2229)",
+        pagina_carichi="pag. 14-15 (Carichi ammissibili)",
+        fonte_ec="Ec = 550000·σc/(σc+200) = 250000 Kg/cm²",
+        note="Calcestruzzo ordinario per edilizia generale con scariche limitate",
+        applicazioni="Solai, travi, pilastri in edifici ordinari, murature",
+        limitazioni="Non adatto per strutture critiche o esposizioni chimiche"
     ),
     
-    CalcestrutzoStorico(
-        nome="C200 (200 Kg/cm²)",
+    CalcestrutzoCompleto(
+        nome="C200 - Cemento Normale - RD2229/1939",
+        sigla="C200",
         sigma_c_kgcm2=200,
-        sigma_c_ammissibile_kgcm2=20,
+        sigma_c_semplice_kgcm2=20,
+        sigma_c_inflessa_kgcm2=16,
         tau_ammissibile_kgcm2=3.0,
-        modulo_elastico_kgcm2=303000,  # Ec = 550000*200/(200+200)
+        modulo_elastico_kgcm2=303000,
         coefficiente_omogeneo=6.6,
         tipo_cemento="normale",
         rapporto_ac=0.95,
-        note="Uso generale, strutture ordinarie"
+        rapporto_cemento_sabbia="1:2.30",
+        cemento_kg_m3=360,
+        sabbia_kg_m3=830,
+        massa_volumica_kg_m3=1100,
+        pagina_tabella_ii="pag. 9 (Tabella II RD2229)",
+        pagina_carichi="pag. 14-15",
+        fonte_ec="Ec = 550000·σc/(σc+200) = 303000 Kg/cm²",
+        note="Calcestruzzo intermedio, uso comune in strutture ordinarie",
+        applicazioni="Solai, travi, pilastri, muri in edifici residenziali e commerciali",
+        limitazioni="Moderato per ambienti aggressivi"
     ),
     
-    # Categoria media (240-280 Kg/cm²) - Strutture importanti
-    CalcestrutzoStorico(
-        nome="C240 (240 Kg/cm²)",
+    CalcestrutzoCompleto(
+        nome="C240 - Cemento Normale - RD2229/1939",
+        sigla="C240",
         sigma_c_kgcm2=240,
-        sigma_c_ammissibile_kgcm2=24,
+        sigma_c_semplice_kgcm2=24,
+        sigma_c_inflessa_kgcm2=19,
         tau_ammissibile_kgcm2=3.5,
-        modulo_elastico_kgcm2=340000,  # Ec = 550000*240/(240+200)
+        modulo_elastico_kgcm2=340000,
         coefficiente_omogeneo=5.9,
         tipo_cemento="normale",
         rapporto_ac=0.80,
-        note="Strutture ordinarie importanti"
+        rapporto_cemento_sabbia="1:2.00",
+        cemento_kg_m3=410,
+        sabbia_kg_m3=820,
+        massa_volumica_kg_m3=1120,
+        pagina_tabella_ii="pag. 9",
+        pagina_carichi="pag. 14-15",
+        fonte_ec="Ec = 550000·σc/(σc+200) = 340000 Kg/cm²",
+        note="Calcestruzzo per strutture ordinarie importanti",
+        applicazioni="Strutture portanti, ponti di piccola-media luce, viadotti",
+        limitazioni="Moderato per ambienti aggressivi"
     ),
     
-    CalcestrutzoStorico(
-        nome="C280 (280 Kg/cm²) - Standard",
+    CalcestrutzoCompleto(
+        nome="C280 - Cemento Normale STANDARD - RD2229/1939",
+        sigla="C280",
         sigma_c_kgcm2=280,
-        sigma_c_ammissibile_kgcm2=28,
+        sigma_c_semplice_kgcm2=28,
+        sigma_c_inflessa_kgcm2=22,
         tau_ammissibile_kgcm2=4.0,
-        modulo_elastico_kgcm2=373000,  # Ec = 550000*280/(280+200)
+        modulo_elastico_kgcm2=373000,
         coefficiente_omogeneo=5.4,
         tipo_cemento="normale",
         rapporto_ac=0.70,
-        note="Calcestruzzo standard storico, più usato"
+        rapporto_cemento_sabbia="1:1.85",
+        cemento_kg_m3=460,
+        sabbia_kg_m3=850,
+        massa_volumica_kg_m3=1130,
+        pagina_tabella_ii="pag. 9 (Tabella II RD2229)",
+        pagina_carichi="pag. 14-15",
+        fonte_ec="Ec = 550000·σc/(σc+200) = 373000 Kg/cm²",
+        note="CALCESTRUZZO STORICO PIÙ UTILIZZATO - Standard epoca Santarella (1930-1970)",
+        applicazioni="Uso generale, strutture portanti, ponti, infrastrutture",
+        limitazioni="Buono per ambienti ordinari"
     ),
     
-    # Categoria alta (330-400 Kg/cm²) - Strutture speciali
-    CalcestrutzoStorico(
-        nome="C330 (330 Kg/cm²)",
+    CalcestrutzoCompleto(
+        nome="C330 - Cemento Alta Resistenza - RD2229/1939",
+        sigla="C330",
         sigma_c_kgcm2=330,
-        sigma_c_ammissibile_kgcm2=33,
+        sigma_c_semplice_kgcm2=33,
+        sigma_c_inflessa_kgcm2=26,
         tau_ammissibile_kgcm2=4.5,
-        modulo_elastico_kgcm2=407000,  # Ec = 550000*330/(330+200)
+        modulo_elastico_kgcm2=407000,
         coefficiente_omogeneo=4.9,
         tipo_cemento="alta_resistenza",
         rapporto_ac=0.60,
-        note="Alta resistenza, strutture speciali"
+        rapporto_cemento_sabbia="1:1.40",
+        cemento_kg_m3=540,
+        sabbia_kg_m3=750,
+        massa_volumica_kg_m3=1130,
+        pagina_tabella_ii="pag. 9",
+        pagina_carichi="pag. 14-15",
+        fonte_ec="Ec = 550000·σc/(σc+200) = 407000 Kg/cm²",
+        note="Calcestruzzo ad alta resistenza, cemento tipo PS (Pozzolana Speciale)",
+        applicazioni="Strutture speciali, ponti importanti, edifici alti, gallerie",
+        limitazioni="Richiede controllo qualità rigoroso"
     ),
     
-    CalcestrutzoStorico(
-        nome="C400 (400 Kg/cm²)",
+    CalcestrutzoCompleto(
+        nome="C400 - Cemento Alta Resistenza - RD2229/1939",
+        sigla="C400",
         sigma_c_kgcm2=400,
-        sigma_c_ammissibile_kgcm2=40,
+        sigma_c_semplice_kgcm2=40,
+        sigma_c_inflessa_kgcm2=32,
         tau_ammissibile_kgcm2=5.0,
-        modulo_elastico_kgcm2=441000,  # Ec = 550000*400/(400+200)
+        modulo_elastico_kgcm2=441000,
         coefficiente_omogeneo=4.5,
         tipo_cemento="alta_resistenza",
         rapporto_ac=0.50,
-        note="Altissima resistenza, ponti/strutture critiche"
+        rapporto_cemento_sabbia="1:1.00",
+        cemento_kg_m3=620,
+        sabbia_kg_m3=620,
+        massa_volumica_kg_m3=1150,
+        pagina_tabella_ii="pag. 9",
+        pagina_carichi="pag. 14-15",
+        fonte_ec="Ec = 550000·σc/(σc+200) = 441000 Kg/cm²",
+        note="Calcestruzzo altissima resistenza, cemento tipo PS o alluminoso",
+        applicazioni="Strutture critiche, ponti lunghi, edifici speciali, gallerie",
+        limitazioni="Controllo qualità essenziale, costo elevato"
     ),
     
-    # Calcestruzzi con sigma ammissibile elevato (75 Kg/cm²)
-    CalcestrutzoStorico(
-        nome="C750 (75 Kg/cm² ammissibile)",
-        sigma_c_kgcm2=750,  # Fittizio, rappresenta il carico ammissibile alto
-        sigma_c_ammissibile_kgcm2=75,  # Carico ammissibile elevato
+    CalcestrutzoCompleto(
+        nome="C750 - Cemento Alluminoso SPECIALE - RD2229/1939",
+        sigla="C750",
+        sigma_c_kgcm2=750,
+        sigma_c_semplice_kgcm2=75,
+        sigma_c_inflessa_kgcm2=60,
         tau_ammissibile_kgcm2=6.0,
         modulo_elastico_kgcm2=500000,
         coefficiente_omogeneo=4.0,
         tipo_cemento="alluminoso",
         rapporto_ac=0.40,
-        note="Calcestruzzo alluminoso ad altissima resistenza, sigma_amm=75 Kg/cm²"
+        rapporto_cemento_sabbia="1:0.50",
+        cemento_kg_m3=750,
+        sabbia_kg_m3=375,
+        massa_volumica_kg_m3=1200,
+        pagina_tabella_ii="pag. 9 (Speciale - Ciment Fondu)",
+        pagina_carichi="pag. 14-15",
+        fonte_ec="Ec = 550000·σc/(σc+200) = 500000 Kg/cm² (Ciment Fondu)",
+        note="Calcestruzzo alluminoso ad altissima resistenza e durabilità (Ciment Fondu - sigma_amm=75 Kg/cm²)",
+        applicazioni="Strutture in ambienti chimicamente aggressivi, refrattari, strutture critiche sottomarine",
+        limitazioni="Molto costoso, reazioni esotermiche in stagionamento, possibile invecchiamento chimico"
     ),
 ]
 
 
 # ======================================================================================
-# TABELLA ACCIAI STORICI (RD 2229/1939)
+# TABELLA ACCIAI COMPLETI (RD 2229/1939)
 # ======================================================================================
 
-ACCIAI_STORICI: List[AcciaioStorico] = [
-    # FeB - Acciai ordinari (ferro-beton)
-    AcciaioStorico(
-        nome="FeB32k (Dolce)",
+ACCIAI_COMPLETI: List[AcciaioCompleto] = [
+    # FeB - Ferro-Beton (barre lisce storiche)
+    AcciaioCompleto(
+        nome="FeB32k Dolce - Ferro-Beton Liscio",
+        sigla="FeB32k",
         tipo="FeB32k",
+        classificazione="FeB (Ferro-Beton liscio)",
         sigma_y_kgcm2=1400,
-        sigma_ammissibile_kgcm2=609,  # ~44% di fy secondo RD 2229
+        sigma_ammissibile_traczione_kgcm2=609,
+        sigma_ammissibile_compressione_kgcm2=609,
         modulo_elastico_kgcm2=2000000,
+        tipo_aderenza="liscia",
         aderenza_migliorata=False,
-        note="Acciaio dolce ordinario, barre lisce"
+        caratteri_aderenza="Barre lisce, superficie liscia ordinaria",
+        diametri_disponibili=[6, 8, 10, 12, 14, 16, 18, 20, 22, 25, 28, 32],
+        diametro_min_mm=6.0,
+        diametro_max_mm=32.0,
+        pagina_resistenza="pag. 9 (Tabella I RD2229)",
+        pagina_carichi="pag. 14-15 (Acciai ordinari)",
+        pagina_aderenza="pag. 11 (Aderenza semplice)",
+        note="Acciaio dolce ordinario, aderenza semplice (liscia). Standard storico RD2229",
+        applicazioni="Uso generale, solai, travi, pilastri in edifici ordinari",
+        limitazioni="Aderenza semplice, minore rispetto acciai migliorati"
     ),
     
-    AcciaioStorico(
-        nome="FeB38k (Semiriduro)",
+    AcciaioCompleto(
+        nome="FeB38k Semiriduro - Ferro-Beton Migliorato",
+        sigla="FeB38k",
         tipo="FeB38k",
+        classificazione="FeB (Ferro-Beton migliorato)",
         sigma_y_kgcm2=1800,
-        sigma_ammissibile_kgcm2=800,  # ~44% di fy
+        sigma_ammissibile_traczione_kgcm2=800,
+        sigma_ammissibile_compressione_kgcm2=800,
         modulo_elastico_kgcm2=2000000,
+        tipo_aderenza="migliorata",
         aderenza_migliorata=True,
-        note="Acciaio semiriduro, migliore aderenza"
+        caratteri_aderenza="Barre con lamine trasversali o nervature, trattamento superficiale",
+        diametri_disponibili=[6, 8, 10, 12, 14, 16, 18, 20, 22, 25, 28, 32],
+        diametro_min_mm=6.0,
+        diametro_max_mm=32.0,
+        pagina_resistenza="pag. 9",
+        pagina_carichi="pag. 14-15",
+        pagina_aderenza="pag. 11 (Aderenza migliorata)",
+        note="Acciaio semiriduro con aderenza migliorata mediante trattamento superficiale",
+        applicazioni="Strutture ordinarie importanti, ponti piccoli, edifici residenziali",
+        limitazioni="Aderenza migliorata ma inferiore a Aq"
     ),
     
-    AcciaioStorico(
-        nome="FeB44k (Duro)",
+    AcciaioCompleto(
+        nome="FeB44k Duro - Ferro-Beton Migliorato",
+        sigla="FeB44k",
         tipo="FeB44k",
+        classificazione="FeB (Ferro-Beton migliorato)",
         sigma_y_kgcm2=2000,
-        sigma_ammissibile_kgcm2=880,  # ~44% di fy
+        sigma_ammissibile_traczione_kgcm2=880,
+        sigma_ammissibile_compressione_kgcm2=880,
         modulo_elastico_kgcm2=2000000,
+        tipo_aderenza="migliorata",
         aderenza_migliorata=True,
-        note="Acciaio duro, migliore aderenza"
+        caratteri_aderenza="Barre con trattamento superficiale migliorato, nervature poco marcate",
+        diametri_disponibili=[6, 8, 10, 12, 14, 16, 18, 20, 22, 25, 28, 32],
+        diametro_min_mm=6.0,
+        diametro_max_mm=32.0,
+        pagina_resistenza="pag. 9",
+        pagina_carichi="pag. 14-15",
+        pagina_aderenza="pag. 11",
+        note="Acciaio duro con aderenza migliorata, resistenza elevata",
+        applicazioni="Strutture speciali, ponti importanti, edifici alti",
+        limitazioni="Costo elevato"
     ),
     
-    # Aq - Acciai laminati qualificati (Aq-qualificati)
-    AcciaioStorico(
-        nome="Aq50 (Qualificato 50)",
+    # Aq - Acciai laminati Qualificati (barre raschiate - serie italiana)
+    AcciaioCompleto(
+        nome="Aq50 Qualificato - Acciaio Laminato",
+        sigla="Aq50",
         tipo="Aq50",
-        sigma_y_kgcm2=500,  # 5000 kg per cm² in unità storiche
-        sigma_ammissibile_kgcm2=220,  # ~44% di fy
+        classificazione="Aq (Qualificato - Laminato raschiato)",
+        sigma_y_kgcm2=500,
+        sigma_ammissibile_traczione_kgcm2=220,
+        sigma_ammissibile_compressione_kgcm2=220,
         modulo_elastico_kgcm2=2050000,
+        tipo_aderenza="migliorata",
         aderenza_migliorata=True,
-        note="Acciaio laminato qualificato, barre raschiate"
+        caratteri_aderenza="Barre laminare raschiate, superficie ruvida per eccellente aderenza",
+        diametri_disponibili=[8, 10, 12, 14, 16, 18, 20, 22, 25, 28, 32],
+        diametro_min_mm=8.0,
+        diametro_max_mm=32.0,
+        pagina_resistenza="pag. 9 (Acciai qualificati)",
+        pagina_carichi="pag. 14-15",
+        pagina_aderenza="pag. 11 (Aderenza eccellente)",
+        note="Acciaio laminato qualificato, serie Aq italiana. Aderenza eccellente per raschatura superficiale",
+        applicazioni="Strutture ordinarie, solai, travi con aderenza critica",
+        limitazioni="Produzione selettiva, non sempre disponibile nel mercato storico"
     ),
     
-    AcciaioStorico(
-        nome="Aq60 (Qualificato 60)",
+    AcciaioCompleto(
+        nome="Aq60 Qualificato - Acciaio Laminato",
+        sigla="Aq60",
         tipo="Aq60",
-        sigma_y_kgcm2=600,  # 6000 kg per cm² in unità storiche
-        sigma_ammissibile_kgcm2=264,  # ~44% di fy
+        classificazione="Aq (Qualificato - Laminato raschiato)",
+        sigma_y_kgcm2=600,
+        sigma_ammissibile_traczione_kgcm2=264,
+        sigma_ammissibile_compressione_kgcm2=264,
         modulo_elastico_kgcm2=2050000,
+        tipo_aderenza="migliorata",
         aderenza_migliorata=True,
-        note="Acciaio laminato qualificato, resistenza media"
+        caratteri_aderenza="Barre laminare raschiate con eccellente aderenza",
+        diametri_disponibili=[8, 10, 12, 14, 16, 18, 20, 22, 25, 28, 32],
+        diametro_min_mm=8.0,
+        diametro_max_mm=32.0,
+        pagina_resistenza="pag. 9",
+        pagina_carichi="pag. 14-15",
+        pagina_aderenza="pag. 11",
+        note="Acciaio laminato qualificato Aq60, resistenza intermedia, aderenza eccellente",
+        applicazioni="Strutture ordinarie importanti, ponti piccoli",
+        limitazioni="Reperibilità limitata nel mercato storico"
     ),
     
-    AcciaioStorico(
-        nome="Aq70 (Qualificato 70)",
+    AcciaioCompleto(
+        nome="Aq70 Qualificato - Acciaio Laminato",
+        sigla="Aq70",
         tipo="Aq70",
-        sigma_y_kgcm2=700,  # 7000 kg per cm² in unità storiche
-        sigma_ammissibile_kgcm2=308,  # ~44% di fy
+        classificazione="Aq (Qualificato - Laminato raschiato)",
+        sigma_y_kgcm2=700,
+        sigma_ammissibile_traczione_kgcm2=308,
+        sigma_ammissibile_compressione_kgcm2=308,
         modulo_elastico_kgcm2=2050000,
+        tipo_aderenza="migliorata",
         aderenza_migliorata=True,
-        note="Acciaio laminato qualificato, alta resistenza"
+        caratteri_aderenza="Barre laminare raschiate, ottima aderenza",
+        diametri_disponibili=[8, 10, 12, 14, 16, 18, 20, 22, 25, 28, 32],
+        diametro_min_mm=8.0,
+        diametro_max_mm=32.0,
+        pagina_resistenza="pag. 9",
+        pagina_carichi="pag. 14-15",
+        pagina_aderenza="pag. 11",
+        note="Acciaio laminato qualificato Aq70 - resistenza alta, eccellente aderenza, usato nei ponti storici",
+        applicazioni="Strutture importanti, ponti, edifici speciali",
+        limitazioni="Costo moderato, reperibilità selettiva"
     ),
     
-    AcciaioStorico(
-        nome="Aq80 (Qualificato 80)",
+    AcciaioCompleto(
+        nome="Aq80 Qualificato - Acciaio Laminato",
+        sigla="Aq80",
         tipo="Aq80",
-        sigma_y_kgcm2=800,  # 8000 kg per cm² in unità storiche
-        sigma_ammissibile_kgcm2=352,  # ~44% di fy
+        classificazione="Aq (Qualificato - Laminato raschiato)",
+        sigma_y_kgcm2=800,
+        sigma_ammissibile_traczione_kgcm2=352,
+        sigma_ammissibile_compressione_kgcm2=352,
         modulo_elastico_kgcm2=2050000,
+        tipo_aderenza="migliorata",
         aderenza_migliorata=True,
-        note="Acciaio laminato qualificato, altissima resistenza"
+        caratteri_aderenza="Barre laminare raschiate, ottima aderenza",
+        diametri_disponibili=[10, 12, 14, 16, 18, 20, 22, 25, 28, 32],
+        diametro_min_mm=10.0,
+        diametro_max_mm=32.0,
+        pagina_resistenza="pag. 9",
+        pagina_carichi="pag. 14-15",
+        pagina_aderenza="pag. 11",
+        note="Acciaio laminato qualificato Aq80 - altissima resistenza e aderenza",
+        applicazioni="Strutture critiche, ponti lunghi, edifici speciali",
+        limitazioni="Costo elevato, reperibilità limitata"
     ),
 ]
 
